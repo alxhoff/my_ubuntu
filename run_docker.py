@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 # Define image and container names
 IMAGE_NAME = "my_ubuntu_image"
+UPDATED_IMAGE_NAME = "my_ubuntu_image_updated"
 CONTAINER_NAME = "my_ubuntu_container"
 
 # Define paths
@@ -61,9 +62,21 @@ def build_image():
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to build Docker image: {e}")
 
-def run_shell(device_paths=None):
-    """Run the Docker container with volume mounted, USB devices (if found), and start an interactive shell with GUI support."""
-    logging.info("Running the Docker container with volume mounted and GUI support...")
+def commit_container():
+    """Commit the running Docker container to a new image."""
+    logging.info(f"Committing container '{CONTAINER_NAME}' to a new image '{UPDATED_IMAGE_NAME}'...")
+    try:
+        commit_command = ["docker", "commit", CONTAINER_NAME, UPDATED_IMAGE_NAME]
+        subprocess.run(commit_command, check=True)
+        logging.info(f"Container '{CONTAINER_NAME}' committed successfully as '{UPDATED_IMAGE_NAME}'.")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to commit container: {e}")
+
+def run_shell(device_paths=None, use_updated_image=False):
+    """Run the Docker container with volume mounted, USB devices (if found), and start an interactive shell."""
+    image_to_use = UPDATED_IMAGE_NAME if use_updated_image else IMAGE_NAME
+    logging.info(f"Running the Docker container '{image_to_use}' with volume mounted and GUI support...")
+
     run_command = [
         "docker", "run", "--rm", "-it",
         "--privileged",  # Add this to give the container additional permissions
@@ -79,7 +92,7 @@ def run_shell(device_paths=None):
         for device_path in device_paths:
             run_command += ["--device", device_path]
 
-    run_command.append(IMAGE_NAME)
+    run_command.append(image_to_use)
     run_command.append("bash")  # Launches into a terminal in the container
 
     try:
@@ -106,7 +119,7 @@ def main():
 
     # Check for arguments
     if len(sys.argv) < 2:
-        logging.error("Usage: python3 run_docker.py <build|shell> [optional: package1 package2 ...]")
+        logging.error("Usage: python3 run_docker.py <build|shell|commit> [optional: package1 package2 ...]")
         sys.exit(1)
 
     # Parse the argument
@@ -126,10 +139,16 @@ def main():
 
         build_image()
     elif command == "shell":
+        use_updated_image = os.path.exists(f"{current_dir}/updated_image_flag")  # Check if updated image should be used
         device_paths = find_usb_devices()
-        run_shell(device_paths)
+        run_shell(device_paths, use_updated_image)
+    elif command == "commit":
+        commit_container()
+        # Create a flag file to indicate that the updated image should be used
+        with open(f"{current_dir}/updated_image_flag", "w") as flag_file:
+            flag_file.write("use_updated_image")
     else:
-        logging.error("Invalid command. Use 'build' to build the image or 'shell' to start a shell.")
+        logging.error("Invalid command. Use 'build' to build the image, 'shell' to start a shell, or 'commit' to save the changes.")
         sys.exit(1)
 
 if __name__ == "__main__":
