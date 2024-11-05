@@ -62,13 +62,16 @@ def build_image():
         logging.error(f"Failed to build Docker image: {e}")
 
 def run_shell(device_paths=None):
-    """Run the Docker container with volume mounted, USB devices (if found), and start an interactive shell."""
-    logging.info("Running the Docker container with volume mounted...")
+    """Run the Docker container with volume mounted, USB devices (if found), and start an interactive shell with GUI support."""
+    logging.info("Running the Docker container with volume mounted and GUI support...")
     run_command = [
         "docker", "run", "--rm", "-it",
+        "--privileged",  # Add this to give the container additional permissions
         "--name", CONTAINER_NAME,
         "-v", f"{volume_host_path}:{volume_container_path}",  # Mount volume
         "-v", f"{sdk_manager_host_path}:{sdk_manager_container_path}",  # Mount SDK Manager volume
+        "-e", "DISPLAY",  # Pass display environment variable
+        "-v", "/tmp/.X11-unix:/tmp/.X11-unix",  # Mount X11 socket
     ]
 
     # Add the USB devices if found
@@ -80,9 +83,15 @@ def run_shell(device_paths=None):
     run_command.append("bash")  # Launches into a terminal in the container
 
     try:
+        # Allow local connections to the X server
+        subprocess.run(["xhost", "+local:docker"], check=True)
+
         subprocess.run(run_command, check=True)
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to run Docker container: {e}")
+    finally:
+        # Revoke X server permissions after container stops
+        subprocess.run(["xhost", "-local:docker"], check=True)
 
 def main():
     # Ensure the volume directory exists

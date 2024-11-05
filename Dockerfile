@@ -20,6 +20,20 @@ RUN apt-get update && \
     python3-yaml \
     sudo \
     libgconf-2-4 \
+    libxshmfence1 \
+    libx11-6 \
+    libxcb1 \
+    libxrender1 \
+    libxtst6 \
+    libxfixes3 \
+    libxi6 \
+    libfontconfig1 \
+    libgl1-mesa-glx \
+    x11-xserver-utils \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    libgbm1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install NVIDIA SDK Manager from sdk_manager folder
