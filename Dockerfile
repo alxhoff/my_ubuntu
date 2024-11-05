@@ -1,5 +1,5 @@
 # Start with the Ubuntu base image
-FROM ubuntu:22.04
+FROM ubuntu:20.04
 
 # Set environment variables if needed
 ENV DEBIAN_FRONTEND=noninteractive

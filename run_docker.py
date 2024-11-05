@@ -52,10 +52,22 @@ def find_usb_devices():
         logging.error(f"Error running lsusb command: {e}")
         return []
 
+def image_exists(image_name):
+    """Check if a Docker image exists locally."""
+    try:
+        subprocess.run(["docker", "inspect", "--type=image", image_name], check=True, stdout=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
 def build_image():
     """Build the Docker image."""
     logging.info("Building the Docker image...")
     try:
+        # Remove old updated image if it exists
+        logging.info("Removing old updated Docker image if it exists...")
+        subprocess.run(["docker", "rmi", "-f", UPDATED_IMAGE_NAME], check=False)
+
         build_command = ["docker", "build", "-t", IMAGE_NAME, "."]
         subprocess.run(build_command, check=True)
         logging.info("Docker image built successfully.")
@@ -74,7 +86,12 @@ def commit_container():
 
 def run_shell(device_paths=None, use_updated_image=False):
     """Run the Docker container with volume mounted, USB devices (if found), and start an interactive shell."""
-    image_to_use = UPDATED_IMAGE_NAME if use_updated_image else IMAGE_NAME
+    # Determine which image to use based on the availability of the updated image
+    if use_updated_image and image_exists(UPDATED_IMAGE_NAME):
+        image_to_use = UPDATED_IMAGE_NAME
+    else:
+        image_to_use = IMAGE_NAME
+
     logging.info(f"Running the Docker container '{image_to_use}' with volume mounted and GUI support...")
 
     run_command = [
@@ -141,7 +158,7 @@ def main():
     elif command == "shell":
         use_updated_image = os.path.exists(f"{current_dir}/updated_image_flag")  # Check if updated image should be used
         device_paths = find_usb_devices()
-        run_shell(device_paths, use_updated_image)
+        run_shell(device_paths=device_paths, use_updated_image=use_updated_image)
     elif command == "commit":
         commit_container()
         # Create a flag file to indicate that the updated image should be used
@@ -153,4 +170,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
