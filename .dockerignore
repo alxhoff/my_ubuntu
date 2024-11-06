@@ -1,0 +1,7 @@
+# Ignore mounted directories to avoid permission errors
+docker_home/
+volume/
+
+# Optionally, ignore other unnecessary files
+.git
+

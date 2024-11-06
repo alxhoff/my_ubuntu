@@ -39,11 +39,12 @@ RUN apt-get update && \
     x11vnc \
     xvfb \
     gnome-terminal \
+    firefox \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install NVIDIA SDK Manager from sdk_manager folder
-COPY ./sdk_manager/*.deb /tmp/sdkmanager.deb
-RUN apt-get update && apt-get install -y /tmp/sdkmanager.deb && rm /tmp/sdkmanager.deb
+COPY ./sdk_manager /tmp/sdk_manager
+RUN if [ -f /tmp/sdk_manager/*.deb ]; then apt-get update && apt-get install -y /tmp/sdk_manager/*.deb && rm /tmp/sdk_manager/*.deb; else echo "No SDK Manager .deb files found"; fi
 
 # Create a persistent data directory
 RUN mkdir -p /data
