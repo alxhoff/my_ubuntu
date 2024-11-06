@@ -2,4 +2,7 @@ volume/*
 !volume/.gitkeep
 sdk_manager/*
 !sdk_manager/.gitkeep
+docker_home/*
+!docker_home/.gitkeep
+updated_image_flag
 tags

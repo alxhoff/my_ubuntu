@@ -92,6 +92,9 @@ def run_shell(device_paths=None, use_updated_image=False):
     else:
         image_to_use = IMAGE_NAME
 
+    # Define the host path for the Docker home directory
+    docker_home_host_path = os.path.join(current_dir, "docker_home")
+
     logging.info(f"Running the Docker container '{image_to_use}' with volume mounted and GUI support...")
 
     run_command = [
@@ -100,6 +103,7 @@ def run_shell(device_paths=None, use_updated_image=False):
         "--name", CONTAINER_NAME,
         "-v", f"{volume_host_path}:{volume_container_path}",  # Mount volume
         "-v", f"{sdk_manager_host_path}:{sdk_manager_container_path}",  # Mount SDK Manager volume
+        "-v", f"{docker_home_host_path}:/home/dockeruser",  # Mount the container's home directory
         "-e", "DISPLAY",  # Pass display environment variable
         "-v", "/tmp/.X11-unix:/tmp/.X11-unix",  # Mount X11 socket
     ]
