@@ -54,20 +54,20 @@ RUN if ls /tmp/sdk_manager/*.deb 1> /dev/null 2>&1; then \
         echo "No SDK Manager .deb files found"; \
     fi
 
-# Create a new user with sudo privileges
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-RUN groupadd -g $GROUP_ID dockeruser && \
-    useradd -m -u $USER_ID -g $GROUP_ID -s /bin/bash dockeruser && \
-    echo "dockeruser:dockeruser" | chpasswd && \
-    adduser dockeruser sudo && \
-    echo "dockeruser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
-# Set the working directory
-WORKDIR /home/dockeruser
-
-# Switch to the new user
-USER dockeruser
+# # Create a new user with sudo privileges
+# ARG USER_ID=1000
+# ARG GROUP_ID=1000
+# RUN groupadd -g $GROUP_ID dockeruser && \
+#     useradd -m -u $USER_ID -g $GROUP_ID -s /bin/bash dockeruser && \
+#     echo "dockeruser:dockeruser" | chpasswd && \
+#     adduser dockeruser sudo && \
+#     echo "dockeruser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+#
+# # Set the working directory
+# WORKDIR /home/dockeruser
+#
+# # Switch to the new user
+# USER dockeruser
 
 # Start the MATE desktop session
 CMD ["mate-session"]

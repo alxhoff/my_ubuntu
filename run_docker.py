@@ -101,6 +101,7 @@ def run_desktop(use_updated_image=False):
         "--limit=" + str(cpu_limit),
         f"--home={home_dir}",
         f"--user={os.getuid()}:{os.getgid()}",
+        "--sudouser=nopasswd",
     ]
 
     # Add device paths if needed
