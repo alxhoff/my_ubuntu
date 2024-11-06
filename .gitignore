@@ -5,4 +5,8 @@ sdk_manager/*
 docker_home/*
 !docker_home/.gitkeep
 updated_image_flag
+Downloads/*
+!Downloads/.gitkeep
+nvidia/*
+!nvidia/.gitkeep
 tags
