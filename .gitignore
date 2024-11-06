@@ -1,5 +1,3 @@
-sdk_manager/*
-!sdk_manager/.gitkeep
 home/*
 !home/.gitkeep
 updated_image_flag

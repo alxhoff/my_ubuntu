@@ -102,6 +102,7 @@ def run_desktop(use_updated_image=False):
         f"--home={home_dir}",
         f"--user={os.getuid()}:{os.getgid()}",
         "--sudouser=nopasswd",
+        "--net",
     ]
 
     # Add device paths if needed
