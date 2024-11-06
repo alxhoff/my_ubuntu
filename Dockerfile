@@ -35,6 +35,10 @@ RUN apt-get update && \
     libatk-bridge2.0-0 \
     libgtk-3-0 \
     libgbm1 \
+    ubuntu-desktop \
+    x11vnc \
+    xvfb \
+    gnome-terminal \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install NVIDIA SDK Manager from sdk_manager folder
@@ -49,6 +53,13 @@ RUN useradd -m -s /bin/bash dockeruser && \
     echo "dockeruser:dockeruser" | chpasswd && \
     adduser dockeruser sudo
 
+# Set up VNC configuration outside the home directory to ensure persistence
+RUN mkdir -p /etc/vnc && \
+    x11vnc -storepasswd dockeruser /etc/vnc/passwd
+
+# Expose the VNC port
+EXPOSE 5900
+
 # Set working directory
 WORKDIR /data
 
@@ -59,5 +70,5 @@ RUN chown -R dockeruser:dockeruser /data
 USER dockeruser
 
 # Set default entrypoint to bash
-CMD ["bash"]
+CMD ["bash", "-c", "Xvfb :0 -screen 0 1024x768x24 & x11vnc -display :0 -forever -passwd mypassword & gnome-session"]
 
