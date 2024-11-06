@@ -1,12 +1,6 @@
-volume/*
-!volume/.gitkeep
 sdk_manager/*
 !sdk_manager/.gitkeep
-docker_home/*
-!docker_home/.gitkeep
+home/*
+!home/.gitkeep
 updated_image_flag
-Downloads/*
-!Downloads/.gitkeep
-nvidia/*
-!nvidia/.gitkeep
 tags

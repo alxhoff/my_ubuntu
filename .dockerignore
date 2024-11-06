@@ -1,7 +1,5 @@
 # Ignore mounted directories to avoid permission errors
 volume/
-Downloads
-nvidia
 
 # Optionally, ignore other unnecessary files
 .git
