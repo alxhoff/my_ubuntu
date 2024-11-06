@@ -10,20 +10,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # Define image and container names
 IMAGE_NAME = "my_ubuntu_desktop"
 UPDATED_IMAGE_NAME = "my_ubuntu_image_updated"
-CONTAINER_NAME = "my_ubuntu_container"
 
 # Define paths
 current_dir = os.path.abspath(os.path.dirname(__file__))
-volume_host_path = os.path.join(current_dir, "volume")
-volume_container_path = "/data"
 sdk_manager_host_path = os.path.join(current_dir, "sdk_manager")
-sdk_manager_container_path = "/sdk_manager"
-
-# Paths for the specific directories to mount
-downloads_host_path = os.path.join(current_dir, "Downloads")
-nvidia_host_path = os.path.join(current_dir, "nvidia")
-downloads_container_path = "/home/dockeruser/Downloads"
-nvidia_container_path = "/home/dockeruser/nvidia"
 
 # Vendor and Product ID for the target USB device
 TARGET_VENDOR_ID = "0955"
@@ -32,6 +22,7 @@ TARGET_PRODUCT_ID = "7023"
 # Calculate half of the available CPU cores
 num_cores = os.cpu_count()
 half_cores = max(1, num_cores // 2)
+cpu_limit = half_cores / num_cores  # This will be a fraction between 0 and 1
 
 def find_usb_devices():
     try:
@@ -58,14 +49,6 @@ def image_exists(image_name):
     except subprocess.CalledProcessError:
         return False
 
-def remove_existing_container():
-    """Remove the existing container if it's already running."""
-    try:
-        subprocess.run(["docker", "rm", "-f", CONTAINER_NAME], check=True)
-        logging.info(f"Stopped and removed existing container '{CONTAINER_NAME}'.")
-    except subprocess.CalledProcessError:
-        logging.info(f"No existing container named '{CONTAINER_NAME}' was found.")
-
 def build_image():
     logging.info("Building the Docker image...")
     try:
@@ -84,80 +67,63 @@ def build_image():
         logging.error(f"Failed to build Docker image: {e}")
 
 def commit_container():
-    logging.info(f"Committing container '{CONTAINER_NAME}' to a new image '{UPDATED_IMAGE_NAME}'...")
+    logging.info(f"Committing container to a new image '{UPDATED_IMAGE_NAME}'...")
     try:
-        commit_command = ["docker", "commit", CONTAINER_NAME, UPDATED_IMAGE_NAME]
+        # Get the container ID of the last x11docker container
+        container_id = subprocess.check_output(
+            ["docker", "ps", "-lq", "--filter", "ancestor=" + IMAGE_NAME]
+        ).decode().strip()
+
+        if not container_id:
+            logging.error("No running container found to commit.")
+            return
+
+        commit_command = ["docker", "commit", container_id, UPDATED_IMAGE_NAME]
         subprocess.run(commit_command, check=True)
-        logging.info(f"Container '{CONTAINER_NAME}' committed successfully as '{UPDATED_IMAGE_NAME}'.")
+        logging.info(f"Container committed successfully as '{UPDATED_IMAGE_NAME}'.")
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to commit container: {e}")
 
-def run_shell(device_paths=None, use_updated_image=False):
+def run_desktop(use_updated_image=False):
+    """Run the Docker container using x11docker."""
     image_to_use = UPDATED_IMAGE_NAME if use_updated_image and image_exists(UPDATED_IMAGE_NAME) else IMAGE_NAME
-    logging.info(f"Running the Docker container '{image_to_use}' with volume mounted...")
+    logging.info(f"Running the Docker container '{image_to_use}' with x11docker in desktop mode...")
 
+    # Create the home directory if it doesn't exist
+    home_dir = os.path.join(current_dir, "home")
+    os.makedirs(home_dir, exist_ok=True)
+
+    # Build the x11docker command
     run_command = [
-        "docker", "run", "--rm", "-it",
-        "--privileged",
-        "--name", CONTAINER_NAME,
-        "-v", f"{volume_host_path}:{volume_container_path}",
-        "-v", f"{sdk_manager_host_path}:{sdk_manager_container_path}",
-        "-v", f"{downloads_host_path}:{downloads_container_path}",
-        "-v", f"{nvidia_host_path}:{nvidia_container_path}",
-        f"--cpus={half_cores}",
-        image_to_use,
-        "bash"
+        "x11docker",
+        "--desktop",
+        "--no-entrypoint",
+        "--limit=" + str(cpu_limit),
+        f"--home={home_dir}",
+        f"--user={os.getuid()}:{os.getgid()}",
     ]
 
+    # Add device paths if needed
+    device_paths = find_usb_devices()
     if device_paths:
         for device_path in device_paths:
-            run_command += ["--device", device_path]
+            run_command += [f"--device={device_path}"]
+
+    # Add the image name
+    run_command.append(image_to_use)
 
     try:
         subprocess.run(run_command, check=True)
+        logging.info("Container started successfully.")
     except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to run Docker container: {e}")
-
-def run_desktop():
-    """Run the Docker container and set up X2Go server."""
-    logging.info(f"Running the Docker container '{IMAGE_NAME}' in desktop mode using X2Go...")
-
-    # Ensure no container with the same name is running
-    remove_existing_container()
-
-    run_command = [
-        "docker", "run",
-        "--privileged",
-        "--name", CONTAINER_NAME,
-        "-v", f"{volume_host_path}:{volume_container_path}",
-        "-v", f"{sdk_manager_host_path}:{sdk_manager_container_path}",
-        "-v", f"{downloads_host_path}:{downloads_container_path}",
-        "-v", f"{nvidia_host_path}:{nvidia_container_path}",
-        "-p", "2222:22",
-        f"--cpus={half_cores}",
-        IMAGE_NAME
-    ]
-
-    # Start the container and capture the ID
-    try:
-        container_id = subprocess.check_output(run_command).decode().strip()
-        logging.info(f"Docker container started with ID {container_id}")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to run Docker container: {e}")
-        return
-
-    logging.info("Container started successfully.")
-    logging.info("You can connect via X2Go client to localhost on port 2222.")
-    logging.info("Use username 'dockeruser' and password 'dockeruser'.")
+        logging.error(f"Failed to run Docker container with x11docker: {e}")
 
 def main():
-    os.makedirs(volume_host_path, exist_ok=True)
+    sdk_manager_host_path = os.path.join(current_dir, "sdk_manager")
     os.makedirs(sdk_manager_host_path, exist_ok=True)
-    os.makedirs(downloads_host_path, exist_ok=True)
-    os.makedirs(nvidia_host_path, exist_ok=True)
 
     if len(sys.argv) < 2:
-        logging.error("Usage: python3 run_docker.py <build|shell|commit|desktop> [optional: package1 package2 ...]")
+        logging.error("Usage: python3 run_docker.py <build|desktop|commit> [optional: package1 package2 ...]")
         sys.exit(1)
 
     command = sys.argv[1].lower()
@@ -171,18 +137,15 @@ def main():
                     req_file.write(package + "\n")
             logging.info(f"Created requirements.txt with additional packages: {additional_packages}")
         build_image()
-    elif command == "shell":
+    elif command == "desktop":
         use_updated_image = os.path.exists(f"{current_dir}/updated_image_flag")
-        device_paths = find_usb_devices()
-        run_shell(device_paths=device_paths, use_updated_image=use_updated_image)
+        run_desktop(use_updated_image=use_updated_image)
     elif command == "commit":
         commit_container()
         with open(f"{current_dir}/updated_image_flag", "w") as flag_file:
             flag_file.write("use_updated_image")
-    elif command == "desktop":
-        run_desktop()
     else:
-        logging.error("Invalid command. Use 'build', 'shell', 'commit', or 'desktop'.")
+        logging.error("Invalid command. Use 'build', 'desktop', or 'commit'.")
         sys.exit(1)
 
 if __name__ == "__main__":
