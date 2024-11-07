@@ -103,6 +103,9 @@ def run_desktop(use_updated_image=False):
         f"--user={os.getuid()}:{os.getgid()}",
         "--sudouser=nopasswd",
         "--net",
+        "--newprivileges",
+        "--",
+        "--privileged"
     ]
 
     # Add device paths if needed
@@ -110,6 +113,12 @@ def run_desktop(use_updated_image=False):
     if device_paths:
         for device_path in device_paths:
             run_command += [f"--device={device_path}"]
+
+    run_command += [
+        "--",
+        image_to_use,
+        "mate-session",
+            ]
 
     # Add the image name
     run_command.append(image_to_use)
